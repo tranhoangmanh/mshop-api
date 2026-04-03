@@ -3,11 +3,12 @@ package dev.manhtran.mshop_api.auth.service;
 import dev.manhtran.mshop_api.auth.dto.AuthResponse;
 import dev.manhtran.mshop_api.auth.dto.LoginRequest;
 import dev.manhtran.mshop_api.auth.dto.SignupRequest;
+import dev.manhtran.mshop_api.common.exception.BadRequestException;
 import dev.manhtran.mshop_api.common.security.JwtUtil;
 import dev.manhtran.mshop_api.user.entity.User;
 import dev.manhtran.mshop_api.user.repository.UserRepository;
 import dev.manhtran.mshop_api.user.service.CustomUserDetailsService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,22 +16,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService userDetailsService;
 
     public AuthResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
@@ -53,7 +46,7 @@ public class AuthService {
 
     public AuthResponse signup(SignupRequest signupRequest) {
         if (userRepository.existsByEmail(signupRequest.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new BadRequestException("Email already exists");
         }
 
         User user = new User();

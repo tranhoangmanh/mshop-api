@@ -1,5 +1,8 @@
 package dev.manhtran.mshop_api.order.service;
 
+import dev.manhtran.mshop_api.common.exception.AccessDeniedException;
+import dev.manhtran.mshop_api.common.exception.BadRequestException;
+import dev.manhtran.mshop_api.common.exception.ResourceNotFoundException;
 import dev.manhtran.mshop_api.order.dto.OrderItemRequest;
 import dev.manhtran.mshop_api.order.dto.OrderResponse;
 import dev.manhtran.mshop_api.order.dto.PlaceOrderRequest;
@@ -10,7 +13,7 @@ import dev.manhtran.mshop_api.product.entity.Product;
 import dev.manhtran.mshop_api.product.repository.ProductRepository;
 import dev.manhtran.mshop_api.user.entity.User;
 import dev.manhtran.mshop_api.user.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,25 +23,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public OrderResponse placeOrder(String userEmail, PlaceOrderRequest request) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new RuntimeException("Order must contain at least one item");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Order order = new Order();
         order.setUser(user);
@@ -52,14 +47,14 @@ public class OrderService {
 
         for (OrderItemRequest itemRequest : request.getItems()) {
             Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + itemRequest.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + itemRequest.getProductId()));
 
             if (!product.getActive()) {
-                throw new RuntimeException("Product is not available: " + product.getName());
+                throw new BadRequestException("Product is not available: " + product.getName());
             }
 
             if (product.getStock() < itemRequest.getQuantity()) {
-                throw new RuntimeException("Insufficient stock for product: " + product.getName());
+                throw new BadRequestException("Insufficient stock for product: " + product.getName());
             }
 
             product.setStock(product.getStock() - itemRequest.getQuantity());
@@ -85,7 +80,7 @@ public class OrderService {
 
     public List<OrderResponse> getUserOrders(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         List<Order> orders = orderRepository.findByUserOrderByCreatedAtDesc(user);
         return orders.stream()
@@ -102,10 +97,10 @@ public class OrderService {
 
     public OrderResponse getOrderById(Long orderId, String userEmail) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         if (!order.getUser().getEmail().equals(userEmail)) {
-            throw new RuntimeException("Access denied");
+            throw new AccessDeniedException("Access denied");
         }
 
         return OrderResponse.fromEntity(order);
@@ -113,22 +108,41 @@ public class OrderService {
 
     @Transactional
     public OrderResponse updateOrderStatus(Long orderId, String status) {
+        if (status == null || status.isBlank()) {
+            throw new BadRequestException("Status is required");
+        }
+
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         try {
             Order.OrderStatus newStatus = Order.OrderStatus.valueOf(status.toUpperCase());
+
+            if (newStatus == Order.OrderStatus.CANCELLED) {
+                if (order.getStatus() != Order.OrderStatus.PENDING
+                        && order.getStatus() != Order.OrderStatus.CONFIRMED) {
+                    throw new BadRequestException(
+                            "Order can only be cancelled from PENDING or CONFIRMED status, current status: " + order.getStatus());
+                }
+
+                for (OrderItem item : order.getOrderItems()) {
+                    Product product = item.getProduct();
+                    product.setStock(product.getStock() + item.getQuantity());
+                    productRepository.save(product);
+                }
+            }
+
             order.setStatus(newStatus);
             Order updatedOrder = orderRepository.save(order);
             return OrderResponse.fromEntity(updatedOrder);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid order status: " + status);
+            throw new BadRequestException("Invalid order status: " + status);
         }
     }
 
     public OrderResponse getOrderByIdAdmin(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         return OrderResponse.fromEntity(order);
     }
 }

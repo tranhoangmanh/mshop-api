@@ -1,18 +1,19 @@
 package dev.manhtran.mshop_api.product.service;
 
+import dev.manhtran.mshop_api.common.exception.ResourceNotFoundException;
 import dev.manhtran.mshop_api.product.dto.ProductRequest;
 import dev.manhtran.mshop_api.product.entity.Product;
 import dev.manhtran.mshop_api.product.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
 
     public List<Product> getAllActiveProducts() {
         return productRepository.findByActiveTrue();
@@ -24,7 +25,7 @@ public class ProductService {
 
     public Product getProductById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
     public List<Product> getProductsByCategory(String category) {
