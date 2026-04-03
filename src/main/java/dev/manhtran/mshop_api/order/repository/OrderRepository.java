@@ -2,13 +2,13 @@ package dev.manhtran.mshop_api.order.repository;
 
 import dev.manhtran.mshop_api.order.entity.Order;
 import dev.manhtran.mshop_api.user.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
-    List<Order> findByUserOrderByCreatedAtDesc(User user);
-    List<Order> findAllByOrderByCreatedAtDesc();
+    Page<Order> findByUser(User user, Pageable pageable);
+    Page<Order> findAll(Pageable pageable);
 }

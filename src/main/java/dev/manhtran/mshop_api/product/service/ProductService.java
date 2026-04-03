@@ -5,9 +5,9 @@ import dev.manhtran.mshop_api.product.dto.ProductRequest;
 import dev.manhtran.mshop_api.product.entity.Product;
 import dev.manhtran.mshop_api.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -15,12 +15,12 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
-    public List<Product> getAllActiveProducts() {
-        return productRepository.findByActiveTrue();
+    public Page<Product> getAllActiveProducts(Pageable pageable) {
+        return productRepository.findByActiveTrue(pageable);
     }
 
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public Page<Product> getAllProducts(Pageable pageable) {
+        return productRepository.findAll(pageable);
     }
 
     public Product getProductById(Long id) {
@@ -28,12 +28,12 @@ public class ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
-    public List<Product> getProductsByCategory(String category) {
-        return productRepository.findByActiveTrueAndCategory(category);
+    public Page<Product> getProductsByCategory(String category, Pageable pageable) {
+        return productRepository.findByActiveTrueAndCategory(category, pageable);
     }
 
-    public List<Product> searchProducts(String keyword) {
-        return productRepository.findByNameContainingIgnoreCase(keyword);
+    public Page<Product> searchProducts(String keyword, Pageable pageable) {
+        return productRepository.findByNameContainingIgnoreCase(keyword, pageable);
     }
 
     public Product createProduct(ProductRequest request) {

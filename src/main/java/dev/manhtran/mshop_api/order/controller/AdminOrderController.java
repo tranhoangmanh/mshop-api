@@ -3,10 +3,13 @@ package dev.manhtran.mshop_api.order.controller;
 import dev.manhtran.mshop_api.order.dto.OrderResponse;
 import dev.manhtran.mshop_api.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -17,8 +20,9 @@ public class AdminOrderController {
     private final OrderService orderService;
 
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        List<OrderResponse> orders = orderService.getAllOrders();
+    public ResponseEntity<Page<OrderResponse>> getAllOrders(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<OrderResponse> orders = orderService.getAllOrders(pageable);
         return ResponseEntity.ok(orders);
     }
 

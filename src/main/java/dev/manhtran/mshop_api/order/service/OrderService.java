@@ -14,13 +14,14 @@ import dev.manhtran.mshop_api.product.repository.ProductRepository;
 import dev.manhtran.mshop_api.user.entity.User;
 import dev.manhtran.mshop_api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -78,21 +79,17 @@ public class OrderService {
         return OrderResponse.fromEntity(savedOrder);
     }
 
-    public List<OrderResponse> getUserOrders(String userEmail) {
+    public Page<OrderResponse> getUserOrders(String userEmail, Pageable pageable) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        List<Order> orders = orderRepository.findByUserOrderByCreatedAtDesc(user);
-        return orders.stream()
-                .map(OrderResponse::fromEntity)
-                .collect(Collectors.toList());
+        Page<Order> orders = orderRepository.findByUser(user, pageable);
+        return orders.map(OrderResponse::fromEntity);
     }
 
-    public List<OrderResponse> getAllOrders() {
-        List<Order> orders = orderRepository.findAllByOrderByCreatedAtDesc();
-        return orders.stream()
-                .map(OrderResponse::fromEntity)
-                .collect(Collectors.toList());
+    public Page<OrderResponse> getAllOrders(Pageable pageable) {
+        Page<Order> orders = orderRepository.findAll(pageable);
+        return orders.map(OrderResponse::fromEntity);
     }
 
     public OrderResponse getOrderById(Long orderId, String userEmail) {

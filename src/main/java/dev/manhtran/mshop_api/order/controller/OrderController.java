@@ -5,12 +5,14 @@ import dev.manhtran.mshop_api.order.dto.PlaceOrderRequest;
 import dev.manhtran.mshop_api.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -27,9 +29,11 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getMyOrders(Authentication authentication) {
+    public ResponseEntity<Page<OrderResponse>> getMyOrders(
+            Authentication authentication,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         String userEmail = authentication.getName();
-        List<OrderResponse> orders = orderService.getUserOrders(userEmail);
+        Page<OrderResponse> orders = orderService.getUserOrders(userEmail, pageable);
         return ResponseEntity.ok(orders);
     }
 
